@@ -102,7 +102,20 @@ The registry lives in `js/slides.js`. Reusable presenter command wiring lives in
 
 ## Presenter controls and styling
 
-Use the owner's Bekk technology, design and product leadership palette (provided 2026-09-08). CSS tokens in `/kafka-demo/css/theme.css` from the core presentation module are the source of truth: Natt `#1F1F1F`, Dag `#F8F8F8`, Rebell `#D4FF26`; Vann `#909DA9` / `#C6D0D9` / `#EEF3F7`; Jord `#AEB7AB` / `#D9DCCF` / `#F1F1E9`. Data visualization colors also include Datarebell `#C3E835` and Datablå `#0142FE`. Use light Vann for the canvas, Dag for controls and panels, Jord for supporting surfaces, Natt for readable text, Datablå for emphasis/data marks, and Rebell sparingly for the primary action. Keep Ild and Luft (management consulting) out of these slides. Fade older card surfaces rather than making record text illegible through whole-card opacity.
+The lessons-local palette in `css/palette.css` is the source of truth for this
+deck's colors. It loads after the shared core theme and before `css/slides.css`.
+Its defaults preserve the owner's Bekk technology, design and product leadership
+palette. For consultancy/client branding, edit the semantic roles in that one file:
+`--accent`, `--action`, `--ink`, `--bg`, `--surface`, `--line`, and the
+support/data surfaces. Keep action text and background readable together.
+
+Use semantic roles in lesson selectors. Brand-named compatibility aliases in the
+palette adapt the existing shared core selectors, so changing this deck does not
+require editing the core theme or affect sibling demos. Keep hex values in the
+local palette; no SVG generation or JavaScript color registry is needed for these
+HTML/CSS views. Refresh the served resources after editing; an existing packaged
+JAR/image still needs its normal rebuild/restart. Fade older card surfaces rather
+than making record text illegible through whole-card opacity.
 
 Keep labels explicit about intent and evidence. The existing form maps an empty input to `null`; an empty string sent through the API is a different Kafka key. Do not automatically retry production: a failed acknowledgment can still mean the record was written. Disable overlapping submissions and recover controls after errors.
 
@@ -192,6 +205,7 @@ the widget status is an observation summary rather than a broker-state claim.
 `js/live-client.js` is the lesson adapter over `/kafka-demo/js/kafka-client.js`.
 It owns experiment parsing, commands and freshness. Core supplies transport, record
 validation and the basic Kafka API. `mountConcepts`, `dispatchConcepts` and
-`initializeDeck` come from `/kafka-demo/js/deck.js`. The core owns theme tokens;
-lesson CSS contains partitioning, ordering and experiment-specific selectors.
+`initializeDeck` come from `/kafka-demo/js/deck.js`. The core supplies default theme tokens and shared selectors; the lessons-local
+`css/palette.css` overrides colors for this deck. Lesson CSS contains partitioning,
+ordering and experiment-specific selectors.
 Shared contracts: [core authoring guide](../../kafka-demo/docs/ADDING_LESSONS.md).

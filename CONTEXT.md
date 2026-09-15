@@ -24,3 +24,12 @@ following successful live verification. The external POC was neither provisioned
 migrated. Root core build artifacts and migration staging backups were removed.
 
 Live runtime verification passed on 2026-09-12: four lesson browser checks, including real production, consumption and experiment controls. One Group A worker and zero delay were restored afterward.
+
+2026-09-15: Added a lessons-local semantic color palette at
+src/main/resources/static/css/palette.css, loaded after the core theme and before
+slides.css. Lesson selectors now use semantic roles; compatibility aliases adapt
+brand-named core selectors without modifying shared code or sibling demos.
+Defaults preserve all existing colors. Static resolution checks found identical
+color declarations for both core and lesson rules, no missing/circular variables,
+and successful alternate accent/action/text/surface propagation. Stylesheet load
+order verified. No browser rendering check or runtime rebuild/restart was performed.

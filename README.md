@@ -461,3 +461,19 @@ Core frontend assets are served under `/kafka-demo/`; local lesson assets are un
 The [lesson backlog](BACKLOG.md) links to the [next-demo plan](docs/NEXT_DEMOS.md)
 for hot keys, duplicate effects/idempotency and retries. These are proposals, not
 implemented features; their code and presentation work belong in this project.
+
+## Presentation colors
+
+Edit [css/palette.css](src/main/resources/static/css/palette.css) to adapt the
+lessons deck to consultancy or client branding. It controls both lesson views and
+deck chrome, independently of sibling demos.
+
+- `--accent`: emphasis, data marks and active states.
+- `--action` / `--action-ink`: primary action background and send-button text.
+- `--ink`, `--muted`, `--bg`, `--surface`, `--line`: text, canvas and controls.
+- `--data-surface*` / `--support-surface*`: records, assignments, panels and tables.
+
+Defaults preserve the current appearance. Shared-theme compatibility aliases are
+kept at the bottom of the palette; use the semantic roles in new lesson styles.
+These are CSS variables, so no diagram generation step is required. Refresh the
+served static resources, or rebuild/restart the existing JAR/image as usual.

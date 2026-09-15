@@ -1,0 +1,37 @@
+/* Lessons presentation palette. Edit these roles to adapt the deck's branding.
+   Loaded after the shared theme; applies to both deck chrome and lesson views. */
+:root {
+  /* Text, canvas, controls and boundaries. */
+  --ink: #1f1f1f;
+  --muted: var(--ink);
+  --bg: #eef3f7;
+  --surface: #f8f8f8;
+  --line: #909da9;
+
+  /* Brand emphasis and explicit presenter actions. */
+  --accent: #0142fe;
+  --action: #d4ff26;
+  --action-ink: var(--ink);
+
+  /* Record age, assignments and offset tracks. */
+  --data-surface: #c6d0d9;
+  --data-surface-subtle: var(--bg);
+
+  /* Group panels, timelines, code examples and table headings. */
+  --support-surface: #f1f1e9;
+  --support-surface-strong: #d9dccf;
+  --support-border: #aeb7ab;
+
+  /* Compatibility with brand-named tokens used inside the shared core theme.
+     Author new lesson styles with the semantic roles above. */
+  --natt: var(--ink);
+  --dag: var(--surface);
+  --rebell: var(--action);
+  --datablaa: var(--accent);
+  --vann: var(--line);
+  --vann-medium: var(--data-surface);
+  --vann-light: var(--data-surface-subtle);
+  --jord: var(--support-border);
+  --jord-medium: var(--support-surface-strong);
+  --jord-light: var(--support-surface);
+}
