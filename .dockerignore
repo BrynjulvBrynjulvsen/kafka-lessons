@@ -1,0 +1,4 @@
+**
+!build/
+!build/libs/
+!build/libs/kafka-lessons-0.1.0-SNAPSHOT.jar

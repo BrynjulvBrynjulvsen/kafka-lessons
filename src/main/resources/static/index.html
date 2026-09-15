@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Kafka, live · Logs, groups and progress</title>
+  <link rel="stylesheet" href="/kafka-demo/vendor/reveal/reveal.css">
+  <link rel="stylesheet" href="/kafka-demo/css/theme.css">
+  <link rel="stylesheet" href="css/slides.css">
+</head>
+<body>
+  <header class="deck-header"><a href="#/">KAFKA<span> / LIVE LAB</span></a><span id="connection" role="status">Connecting…</span></header>
+  <div class="reveal"><div class="slides">
+    <section>
+      <p class="eyebrow">01 / PARTITIONING</p>
+      <h1>One topic.<br><span>Many ordered logs.</span></h1>
+      <p class="intro">Send a record. Follow its key.<br>See where Kafka puts it.</p>
+      <div class="pipeline"><span>Browser producer</span><b>→</b><span>Kafka topic</span><b>→</b><span>Live observation</span></div>
+      <p class="footnote">A real broker. Real partitions and offsets. Use → to begin.</p>
+    </section>
+    <section>
+      <p class="eyebrow">02 / PREDICT</p>
+      <h2>Where will the next<br>record land?</h2>
+      <div class="predictions">
+        <article><span>01</span><h3>Repeat a key</h3><p>With the same partition count and default partitioner, the same key selects the same partition.</p></article>
+        <article><span>02</span><h3>Change the key</h3><p>Different keys can share a partition. Try several; do not expect one partition per key.</p></article>
+        <article><span>03</span><h3>Leave it empty</h3><p>A null key lets the producer choose. Batching means this is not necessarily round-robin.</p></article>
+      </div>
+      <p class="footnote">Look for ordering within a partition. Offsets from different partitions are not a global sequence.</p>
+    </section>
+    <section id="partitioning" data-concept="partitioning">
+      <p class="eyebrow">03 / EXPERIMENT</p>
+      <h2>Follow the key.</h2>
+      <div class="lab">
+        <form id="producer">
+          <label for="topic">Topic</label><select id="topic" disabled></select>
+          <label for="key">Record key <small>empty = null</small></label><input id="key" value="customer-1" maxlength="1024" autocomplete="off">
+          <label for="value">Value</label><textarea id="value" maxlength="16384" rows="2">Hello Kafka</textarea>
+          <button id="send" type="submit" disabled>Produce record ↗</button>
+          <p id="produce-status" role="status">Discovering configured topics…</p>
+          <button id="reconnect" class="secondary" type="button">Reconnect stream</button>
+        </form>
+        <div class="observations">
+          <div class="observation-heading"><span>CONSUMED RECORDS <b id="count">0</b></span><button id="clear" class="secondary" type="button">Clear display</button></div>
+          <div id="partitions"><p class="empty">Waiting for consumed records.<br>Produce a record to discover its partition.</p></div>
+          <p class="legend">Only observed partitions appear. Latest 4 cards per partition; older cards fade as new ones arrive. Clearing changes this display only.</p>
+        </div>
+      </div>
+    </section>
+    <section>
+      <p class="eyebrow">04 / INSPECT & CHANGE</p>
+      <h2>The code is the lesson.</h2>
+      <div class="code-layout"><pre><code>// MessageController.kt
+kafka.send(ProducerRecord(
+    topic, message.key, message.value
+))
+
+// TopicConsumer.kt
+partition = record.partition()
+offset = record.offset()</code></pre><div><h3>Change one thing.</h3><p>Return to the lab. Keep the key and change the value. Then change the key. Compare the observed partition and offset.</p><p>Open a second browser window: both viewers receive copies from the same backend consumer.</p></div></div>
+      <p class="footnote">HTTP success = broker acknowledgment. A card = backend consumption observed.<br>Neither proves application processing or an offset commit. Reconnecting has no browser replay.</p>
+    </section>
+
+    <section id="ordering-predict">
+      <p class="eyebrow">ORDERING / PREDICT</p><h2>Two sequences.<br>Which order survives?</h2>
+      <div class="predictions"><article><h3>Same key</h3><p>Send A1, A2, A3. Keep partition count and partitioner fixed.</p></article><article><h3>Interleave</h3><p>Send A1, B1, A2, B2. Must two keys land in different partitions?</p></article><article><h3>Compare</h3><p>Does offset 12 in one partition come before offset 15 in another?</p></article></div>
+      <p class="footnote">Kafka offsets order records within each partition. Payload sequence labels belong to the application.</p>
+    </section>
+    <section id="ordering" data-concept="ordering">
+      <p class="eyebrow">ORDERING / EXPERIMENT</p><h2>Follow each sequence.</h2>
+      <div class="sequence-controls"><label>First key <input name="first-key" value="customer-1"></label><label>Second key <input name="second-key" value="customer-2"></label><button data-action="sequence">Send interleaved sequence</button></div>
+      <p data-role="sequence-status" class="command-status" role="status">Uses the deck's selected topic. Each send waits for acknowledgment.</p>
+      <div data-role="lanes" class="order-lanes"></div>
+      <p class="legend">Latest six observations per lane, oldest → newest. Offsets need not be contiguous. Different keys may share a partition.</p>
+    </section>
+    <section id="ordering-code"><p class="eyebrow">ORDERING / INSPECT &amp; CHANGE</p><h2>Change a key. Keep the sequence.</h2>
+      <div class="code-layout"><pre><code>// MessageController.kt
+kafka.send(ProducerRecord(
+    topic, message.key, message.value
+))
+// TopicConsumer.kt
+partition = record.partition()
+offset = record.offset()</code></pre><div><p>Return to the experiment. Make both keys identical, then send again.</p><p>Compare the partition lanes. Payload numbers and Kafka offsets are separate sequences.</p></div></div>
+    </section>
+    <section id="groups-predict"><p class="eyebrow">GROUPS / PREDICT</p><h2>Three partitions.<br>Four consumers?</h2>
+      <div class="predictions"><article><h3>One group</h3><p>Start one, then two, then four members. Predict which members own partitions.</p></article><article><h3>Two groups</h3><p>Start group B. Send fresh records. Does B take work away from A?</p></article><article><h3>Two browsers</h3><p>Open another viewer. Does this add a Kafka group member?</p></article></div>
+    </section>
+    <section id="groups" data-concept="groups" class="experiment"><p class="eyebrow">GROUPS / EXPERIMENT</p><h2>Who owns each partition?</h2>
+      <div class="lab"><div data-role="experiment-controls" class="experiment-controls"></div><div data-role="experiment-view" class="experiment-view group-view"></div></div>
+      <p class="legend">Assignments and deliveries come from dedicated demo workers. Wait for running members and assigned partitions before sending. Input explicitly rotates partitions.</p>
+    </section>
+    <section id="groups-code"><p class="eyebrow">GROUPS / INSPECT &amp; CHANGE</p><h2>Membership belongs to the backend.</h2>
+      <div class="code-layout"><pre><code>// ExperimentRuntime.kt
+GROUP_ID_CONFIG = group
+kafka.subscribe(listOf(topic), listener)
+val records = kafka.poll(...)
+// listener reports actual assignments</code></pre><div><p>Change member count in group A. Then start B and send a fresh workload.</p><p>One owner per partition per stable group. More members than partitions means idle members.</p></div></div>
+      <p class="footnote">Slides share one observation socket. Navigation and browser reconnect do not change group membership.</p>
+    </section>
+    <section id="offsets-predict"><p class="eyebrow">OFFSETS / PREDICT</p><h2>Where will we resume?</h2>
+      <div class="predictions"><article><h3>Restart</h3><p>After a confirmed commit, stop and restart the group.</p></article><article><h3>Change policy</h3><p>Does earliest override an existing valid commit?</p></article><article><h3>Replay</h3><p>Stop all members, reset one partition within its retained range, then restart.</p></article></div>
+    </section>
+    <section id="offsets" data-concept="offsets" class="experiment"><p class="eyebrow">OFFSETS / EXPERIMENT</p><h2>Fetch. Process. Commit.</h2>
+      <div class="lab"><div data-role="experiment-controls" class="experiment-controls"></div><div data-role="experiment-view" class="experiment-view"></div></div>
+      <p class="legend">All → values are next offsets. Position can lead processing after a batch poll. Commit is sampled from Kafka. — means unknown; processed progress covers this worker's current assignment.</p>
+    </section>
+    <section id="offsets-code"><p class="eyebrow">OFFSETS / INSPECT &amp; CHANGE</p><h2>A commit stores the next offset.</h2>
+      <div class="code-layout"><pre><code>// ExperimentRuntime.kt
+val records = kafka.poll(...)
+for (record in records) {
+    // simulated processing delay
+    completed[partition] =
+        OffsetAndMetadata(record.offset() + 1)
+}
+kafka.commitSync(completed, ...)</code></pre><div><p>Compare a group with a valid commit and an unused group. Earliest/latest applies when a valid commit is absent.</p><p>A display reset clears observations. An inactive-group offset reset changes Kafka's resume point.</p></div></div>
+    </section>
+    <section id="lag-predict"><p class="eyebrow">LAG / PREDICT</p><h2>Can processing keep up?</h2>
+      <div class="predictions"><article><h3>Slow down</h3><p>Start a member in the group lab. Set group A’s processing delay to 1000 ms.</p></article><article><h3>Send</h3><p>Send a bounded workload. Predict which partition backlogs grow.</p></article><article><h3>Catch up</h3><p>Stop production. Set delay to zero. Watch confirmed commits catch up.</p></article></div>
+    </section>
+    <section id="lag" data-concept="lag" class="experiment"><p class="eyebrow">LAG / EXPERIMENT</p><h2>Watch the distance close.</h2>
+      <div class="lab"><div data-role="experiment-controls" class="experiment-controls"></div><div data-role="experiment-view" class="experiment-view"></div></div>
+      <p class="legend">Committed-offset lag = log end − committed offset, per partition. It is an offset distance, not a count of unfinished business operations. Commits can advance in steps.</p>
+    </section>
+    <section id="lag-code"><p class="eyebrow">LAG / INSPECT &amp; CHANGE</p><h2>Separate work from its checkpoint.</h2>
+      <div class="code-layout"><pre><code>// ExperimentRuntime.kt
+Thread.sleep(groupDelays.getValue(group))
+kafka.commitSync(completed, ...)
+
+// independently sampled broker offsets
+lag = logEndOffset - committedOffset</code></pre><div><p>Change only processing delay at first. Keep the workload and commit policy fixed.</p><p>Zero lag means the sampled commit has caught up. It does not prove external business effects completed.</p></div></div>
+    </section>
+  </div></div>
+  <footer>APACHE KAFKA / LIVE LESSONS <span>← → navigate · Esc overview · F fullscreen</span></footer>
+  <script type="module" src="js/slides.js"></script>
+</body>
+</html>

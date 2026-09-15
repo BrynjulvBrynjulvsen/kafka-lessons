@@ -1,0 +1,13 @@
+.gradle/
+.kotlin/
+build/
+.idea/
+*.iml
+.env
+gradle.properties
+.tools/
+.local/
+node_modules/
+test-results/
+playwright-report/
+compose.poc.yml
