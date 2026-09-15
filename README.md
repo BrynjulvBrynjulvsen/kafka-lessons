@@ -7,8 +7,10 @@ Depends on the sibling [Kafka core](../kafka-demo/README.md).
 
 Start with **[SETUP.md](SETUP.md)** for participant requirements, a self-contained
 local Kafka broker, running the slides, and editing producer/consumer code.
-The default `compose.yml` runs only Kafka and topic initialization; run the lesson
-application locally with JDK 21. No migration or workshop infrastructure is required.
+The default `compose.yml` runs Kafka, topic initialization, and [Kafbat UI](http://localhost:8081);
+run the lesson application locally with JDK 21. No migration or workshop infrastructure is required.
+In Kafbat, select **lessons → Topics → kafka-demo → Messages** and use String
+deserialization for demo keys and values.
 
 ## Alternative: use an existing workshop broker
 

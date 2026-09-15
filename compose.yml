@@ -29,6 +29,17 @@ services:
       retries: 20
       start_period: 15s
 
+  kafbat-ui:
+    image: ghcr.io/kafbat/kafka-ui:v1.5.0
+    ports:
+      - "127.0.0.1:8081:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: lessons
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+    depends_on:
+      kafka:
+        condition: service_healthy
+
   init-topics:
     image: confluentinc/cp-kafka:7.8.6
     depends_on:

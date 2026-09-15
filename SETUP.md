@@ -11,7 +11,7 @@ are needed.
 - **JDK 21**. Set `JAVA_HOME` to it; check that `java -version` reports 21.
 - **IntelliJ IDEA with Kotlin support**, or another Kotlin-capable IDE. Select
   JDK 21 for both the project SDK and Gradle JVM.
-- **A modern browser** and free local ports **8080** (slides) and **9094** (Kafka).
+- **A modern browser** and free local ports **8080** (slides), **8081** (Kafbat UI), and **9094** (Kafka).
 - **The lesson and core source folders**, supplied by the facilitator. If cloning
   them, install Git too. Keep the supplied matching revisions together.
 - **Internet access for the first run**, to download the Kafka image, Gradle and
@@ -52,13 +52,17 @@ configured separately as described above.
 ## 2. Start Kafka and create the topics
 
 ```sh
-docker compose up -d kafka
+docker compose up -d kafka kafbat-ui
 docker compose run --rm init-topics
 ```
 
 Wait for the second command to finish successfully. It waits for Kafka to become
 healthy and creates `kafka-demo` and `kafka-demo-lab`, each with three partitions.
 Both commands are safe to repeat; existing records and topics are preserved.
+
+Open [Kafbat UI](http://localhost:8081), select **lessons → Topics → kafka-demo → Messages**,
+and use String deserialization for the demo key and value. The UI is configured to
+connect to this Compose broker at `kafka:9092`.
 
 ## 3. Start the slides
 
@@ -123,7 +127,7 @@ Repeat steps 2 and 3 to start fresh.
 | Symptom | Check |
 | --- | --- |
 | Docker connection error | Start Docker and wait until its engine is ready. |
-| Port already in use | Stop the other application using 8080 or broker using 9094, including an old workshop setup. |
+| Port already in use | Stop the other application using 8080, Kafbat UI using 8081, or broker using 9094, including an old workshop setup. |
 | Java/Gradle version error | Select JDK 21 in `JAVA_HOME` and the IDE's Gradle JVM. |
 | Cannot resolve core dependencies | Check the sibling directory names and the `-PkafkaDemoCore=../kafka-demo` argument or IDE property above. |
 | Kafka unavailable or missing topics | Run `docker compose ps`, inspect `docker compose logs kafka`, and rerun `docker compose run --rm init-topics`. |
