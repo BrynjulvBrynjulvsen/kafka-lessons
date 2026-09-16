@@ -57,7 +57,7 @@ docker compose run --rm init-topics
 ```
 
 Wait for the second command to finish successfully. It waits for Kafka to become
-healthy and creates `kafka-demo` and `kafka-demo-lab`, each with three partitions.
+healthy and creates `kafka-demo`, `kafka-demo-lab` and `kafka-demo-confirmations`, each with three partitions.
 Both commands are safe to repeat; existing records and topics are preserved.
 
 Open [Kafbat UI](http://localhost:8081), select **lessons → Topics → kafka-demo → Messages**,
@@ -70,7 +70,7 @@ connect to this Compose broker at `kafka:9092`.
 ./gradlew -PkafkaDemoCore=../kafka-demo bootRun
 ```
 
-Leave this terminal running. Open **http://localhost:8080**. Wait for the backend
+Leave this terminal running. Open **http://localhost:8080/** for the explanations and live demos. Wait for the backend
 log to show the observer's partition assignment before sending records.
 
 ### Readiness check
@@ -99,7 +99,7 @@ Useful starting points:
   uses `KafkaTemplate`.
 - **Poll, process and commit:** `src/main/kotlin/io/bekk/kafkalessons/ExperimentRuntime.kt`
   contains the experiment `Worker` and its `KafkaConsumer` loop.
-- **Slide content:** `src/main/resources/static/index.html`.
+- **Slide content:** `src/main/resources/static/index.html` (explanations and live demos).
 
 Change one thing, predict its effect, rerun and compare the observations. Standalone
 producer/consumer exercises can use `localhost:9094`, string keys/values, and the

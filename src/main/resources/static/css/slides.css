@@ -69,3 +69,25 @@
 .group-membership details label { margin-top:7px; font-size:11px; }
 .group-membership .membership-delay { display:flex; flex-direction:row; align-items:center; justify-content:space-between; gap:8px; font-size:11px; margin-top:10px; }
 .group-membership .membership-delay select { width:100px; padding:5px 7px; font-size:12px; }
+
+/* Order notification lesson: local effect, separate from observer cards. */
+.notification-demo h2 { margin-bottom:12px; }
+.notification-intro { font-size:20px; line-height:1.4; margin-bottom:20px; }
+.notification-stages { display:grid; grid-template-columns:repeat(4,1fr); gap:18px; margin-bottom:22px; }
+.notification-stages article { border-top:4px solid var(--line); background:var(--surface); padding:14px 18px; }
+.notification-stages article[data-done="true"] { border-color:var(--accent); background:var(--support-surface); }
+.notification-stages span, .notification-stages small { display:block; font-size:13px; }
+.notification-stages strong { display:block; font-size:22px; font-weight:500; margin:9px 0; }
+.notification-layout { display:grid; grid-template-columns:320px 1fr; gap:30px; }
+.notification-controls { display:flex; flex-direction:column; gap:10px; }
+.notification-buttons { display:flex; gap:10px; }
+.notification-buttons button { flex:1; font-size:15px; }
+.notification-controls label { display:flex; flex-direction:column; gap:6px; }
+.notification-controls p { font-size:13px; line-height:1.4; }
+.notification-controls [data-action="notification-place"] { background:var(--action); }
+.notification-layout h3 { font-size:22px; margin-bottom:10px; }
+[data-role="notification-inbox"] { height:230px; overflow:auto; }
+.notification-card { background:var(--surface); border-left:4px solid var(--accent); padding:14px 18px; margin-bottom:10px; }
+.notification-card strong { font-size:19px; }
+.notification-card p { font-size:18px; margin:8px 0; overflow-wrap:anywhere; }
+.notification-empty { font-size:20px; border:1px dashed var(--line); padding:35px 24px; line-height:1.5; }

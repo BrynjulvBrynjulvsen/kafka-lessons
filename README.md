@@ -14,7 +14,7 @@ deserialization for demo keys and values.
 
 ## Alternative: use an existing workshop broker
 
-Requires JDK 21 and the workshop Kafka broker. Create both demo topics once in the current Docker context:
+Requires JDK 21 and the workshop Kafka broker. Create the three demo topics once in the current Docker context:
 
 If your default Java is newer than the Gradle wrapper supports, set `JAVA_HOME` to a JDK 21 installation first.
 
@@ -23,6 +23,8 @@ docker exec kafka1 kafka-topics --bootstrap-server kafka1:9092 \
   --create --if-not-exists --topic kafka-demo --partitions 3 --replication-factor 1
 docker exec kafka1 kafka-topics --bootstrap-server kafka1:9092 \
   --create --if-not-exists --topic kafka-demo-lab --partitions 3 --replication-factor 1
+docker exec kafka1 kafka-topics --bootstrap-server kafka1:9092 \
+  --create --if-not-exists --topic kafka-demo-confirmations --partitions 3 --replication-factor 1
 ./gradlew -PkafkaDemoCore=../kafka-demo bootRun
 ```
 
@@ -60,6 +62,9 @@ kafka-topics --bootstrap-server localhost:32095 \
 kafka-topics --bootstrap-server localhost:32095 \
   --command-config "$PWD/.local/client.properties" \
   --create --if-not-exists --topic kafka-demo-lab --partitions 3 --replication-factor 1
+kafka-topics --bootstrap-server localhost:32095 \
+  --command-config "$PWD/.local/client.properties" \
+  --create --if-not-exists --topic kafka-demo-confirmations --partitions 3 --replication-factor 1
 ```
 
 Stop any existing lesson backend on port 8080, build the JAR with
@@ -88,7 +93,22 @@ Browser reconnect does not recreate the backend's AdminClient.
 
 ## Live slides
 
-Open `http://localhost:8080/` after starting the application. The reveal.js deck introduces partitioning, offers predictions, runs a live producer/consumer experiment, and points to the Kotlin code to change.
+The first-session narrative starts at `/#/welcome` and combines visual explanations
+with the existing live partitioning, ordering and consumer-group demos. See
+[the presenter guide](docs/FIRST_SESSION.md) for the flow and
+[new-demo reminders](BACKLOG.md) for additional capabilities to build.
+The main session ends at `/#/first-session-end`; offsets/replay and lag
+code inspection follow `/#/optional-labs` in the same deck.
+
+The main session includes a short catch-up demonstration at `/#/lag`, using
+one shared view for recovery and processing-speed scenarios. Follow the presenter's warm-up,
+stop/produce/restart procedure in `docs/FIRST_SESSION.md` to establish valid commits.
+Customer-visible delay, duplicate-effect risks and client requirements are explained
+alongside the demos; no live crash or durable deduplication capability is implied.
+
+All live demos use the main URL, including `/#/partitioning`, `/#/ordering` and
+`/#/groups`. `/labs.html` redirects to the main deck for compatibility with links
+from the temporary split. Rebuild/restart a packaged application to serve source changes.
 
 On the experiment slide, select a configured topic, send several records with `customer-1`, then change the key or leave it empty for a null key. The acknowledgment reports the broker's partition and offset; cards appear only from the separate WebSocket consumption stream. Only observed partitions appear, and each retains four cards. Clear display resets browser observations only.
 
@@ -98,7 +118,7 @@ Use arrow keys to navigate, Esc for overview, and F for fullscreen. Form control
 
 To refresh the bundled library after intentionally changing its version in `package.json`, run `npm install` and `npm run vendor` in the core checkout, then commit the lockfile and vendor assets. For an unchanged lockfile, use `npm ci` instead. Gradle includes the checked-in assets in the application JAR.
 
-The frontend is plain JavaScript served by Spring Boot from `src/main/resources/static`, using same-origin HTTP and WebSocket URLs. `index.html` defines the lesson, `js/slides.js` wires navigation and controls, `js/live-client.js` adds experiments to core transport, and `js/concepts/partitioning.js` renders observations. New concepts register a mount function that returns `onRecord` and `reset`, with optional `onExperiment` for experiment snapshots. Commands are wired separately in `js/controls`.
+The frontend is plain JavaScript served by Spring Boot from `src/main/resources/static`, using same-origin HTTP and WebSocket URLs. `index.html` defines the explanations and live demos, `js/slides.js` wires navigation and controls, `js/live-client.js` adds experiments to core transport, and `js/concepts/partitioning.js` renders observations. New concepts register a mount function that returns `onRecord` and `reset`, with optional `onExperiment` for experiment snapshots. Commands are wired separately in `js/controls`.
 
 ## Produce a record with curl
 
@@ -281,7 +301,7 @@ settings above. Stop the old observer before replacing it with the same group ID
 
 Ordering works with the original setup at `http://localhost:8080/#/ordering`.
 The remaining lessons use experiments, which are **enabled by default**. The Run
-instructions create both required topics; no enable flag is needed. Startup begins
+instructions create all three required topics; no enable flag is needed. Startup begins
 periodic broker sampling and permits commands to start dedicated consumers,
 generate bounded workloads and reset offsets for inactive experiment groups.
 Workers and workloads still require explicit presenter commands; browser navigation
@@ -425,7 +445,7 @@ If Compose is installed as a standalone command, use `docker-compose` in place o
 recreating the containers does not. Each image contains its own executable JAR.
 After a source change, rebuild the image and run `up -d --no-build` again.
 
-Open [the demo](http://localhost:8080/).
+Open [the introduction](http://localhost:8080/) or [the live demos](http://localhost:8080/#/partitioning).
 Wait for actual source readiness, not just a running container:
 - `/api/experiment`: a successful broker sample; application logs show observer partition assignments. A browser subscription alone is insufficient.
 
@@ -477,3 +497,54 @@ Defaults preserve the current appearance. Shared-theme compatibility aliases are
 kept at the bottom of the palette; use the semantic roles in new lesson styles.
 These are CSS variables, so no diagram generation step is required. Refresh the
 served static resources, or rebuild/restart the existing JAR/image as usual.
+
+## Order event → confirmation event → inbox
+
+Open `/#/demo-record-journey`. **Start chain** starts two consumers with independent
+groups. After both are assigned, **Place order** publishes an OrderPlaced event.
+The confirmation service consumes it, performs a simulated 1.5-second processing
+step, and publishes OrderConfirmationPrepared to a second Kafka topic. A separate
+inbox consumer reads that record and fills the local inbox. The four displayed
+stages are order acknowledgment, service receipt, confirmation acknowledgment and
+inbox receipt. The inbox never fills from a producer acknowledgment alone.
+
+The input is `demo.experiment.topic` (default `kafka-demo-lab`). The output is
+`demo.notifications.confirmation-topic` / `DEMO_CONFIRMATION_TOPIC` (default
+`kafka-demo-confirmations`). Both must exist, be distinct and be in `demo.topics`
+(`KAFKA_TOPICS` if overridden). Local Compose creates all three configured topics;
+existing installations should rerun `docker compose run --rm init-topics`.
+For another broker, provision the output topic explicitly:
+
+```sh
+kafka-topics --bootstrap-server localhost:9094 --create --if-not-exists \
+  --topic kafka-demo-confirmations --partitions 3 --replication-factor 1
+```
+
+Use that broker's connection/authentication options; POC users must also authorize
+read/write of the output topic. Groups are `<experiment-prefix>-notifications` and
+`<experiment-prefix>-notification-inbox`, separate from observer and A/B groups.
+Both consumers live in this application, on separate threads. No extra WebSocket
+is used: the existing input-topic experiment snapshot carries the four stages.
+
+Both events use the order ID as key. The output contains `type`, `demo`, `eventId`,
+`causationId`, `orderId` and `message`; causationId identifies the OrderPlaced event.
+The confirmation event ID is derived from that input ID. The UI shows actual output
+partition/offset metadata from publication and inbox consumption separately.
+
+**Stop chain** stops both consumers; **Clear stopped inbox** clears local state only.
+At most 12 correlations are retained and four received confirmations displayed.
+Restart loses session correlations/inbox contents, not Kafka records or commits.
+This remains a bounded teaching chain: only events correlated to orders submitted
+in this backend session are eligible. Output publication precedes input commit;
+they are not transactional. A failure can yield duplicate confirmation records on
+redelivery. No durable idempotency or exactly-once effect is claimed.
+
+`GET/POST /api/notifications` retains the start/stop/place/clear actions. Snapshot
+fields add confirmationTopic, inboxGroup and per-order confirmationAcknowledgedAt,
+confirmationEventId, confirmationPartition/Offset and inboxPartition/Offset.
+completedAt now means receipt by the inbox consumer; receivedAt means service receipt.
+Ambiguous sends are not automatically retried by the demo controls. An output-send
+or consumer failure stops the chain; inspect its state before an explicit restart.
+
+See [backlog item 18](BACKLOG.md#demo-order-notifications) and
+[ADR 00002](docs/adr/ADR-00002-confirmation-event-chain.md).

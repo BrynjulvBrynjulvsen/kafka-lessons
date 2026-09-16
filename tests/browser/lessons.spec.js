@@ -16,7 +16,7 @@ test('numbered ordering and experiment controls preserve one transport', async (
   await page.goto('/#/groups'); // new page for experiment session
   await expect(page.locator('#groups button').first()).toBeEnabled();
   await page.locator('#groups button').first().click();
-  await expect(page.locator('#connection')).toHaveText(`Subscribed · ${config.topic} · no replay`);
+  await expect(page.locator('#connection')).toHaveText(`Subscribed · ${config.topic} · no browser replay`);
   const baselineSockets = sockets;
   // Start only through explicit controls. Stopping first makes reruns deterministic.
   for (const group of config.groups) await request.post('/api/experiment', { data: { action: 'stop', group } });
@@ -38,7 +38,7 @@ test('numbered ordering and experiment controls preserve one transport', async (
   await page.evaluate(() => { location.hash = '/partitioning'; });
   await page.getByRole('button', { name: 'Reconnect stream' }).click();
   await expect.poll(() => sockets).toBe(baselineSockets + 1);
-  await expect(page.locator('#connection')).toHaveText(`Subscribed · ${config.topic} · no replay`);
+  await expect(page.locator('#connection')).toHaveText(`Subscribed · ${config.topic} · no browser replay`);
   expect((await (await request.get('/api/experiment')).json()).members.map(m => m.id)).toEqual(membersBefore);
   for (const width of [1440, 1024]) {
     await page.setViewportSize({ width, height: width === 1440 ? 960 : 768 });

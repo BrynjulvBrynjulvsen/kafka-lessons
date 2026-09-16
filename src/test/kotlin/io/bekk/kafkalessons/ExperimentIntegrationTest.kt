@@ -14,12 +14,13 @@ import java.time.Duration
 import java.util.concurrent.TimeUnit
 
 @SpringBootTest(properties = [
-    "demo.topics=experiment-test", "demo.default-topic=experiment-test",
+    "demo.topics=experiment-test,experiment-confirmations", "demo.default-topic=experiment-test",
+    "demo.notifications.confirmation-topic=experiment-confirmations",
     "spring.kafka.consumer.group-id=experiment-observer-test",
     "demo.experiment.enabled=true", "demo.experiment.topic=experiment-test",
     "demo.experiment.group-prefix=experiment-integration",
 ])
-@EmbeddedKafka(partitions = 3, topics = ["experiment-test"], bootstrapServersProperty = "spring.kafka.bootstrap-servers")
+@EmbeddedKafka(partitions = 3, topics = ["experiment-test", "experiment-confirmations"], bootstrapServersProperty = "spring.kafka.bootstrap-servers")
 @DirtiesContext
 class ExperimentIntegrationTest {
     @Autowired private lateinit var runtime: ExperimentRuntime

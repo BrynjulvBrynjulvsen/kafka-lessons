@@ -6,7 +6,8 @@ This is the maintained authoring guide for humans and agents. The companion proj
 
 | Need | Change |
 | --- | --- |
-| Explanation, prediction, or code slide | Add a `section` to `src/main/resources/static/index.html` |
+| Narrative explanation | Add a `section` to `src/main/resources/static/index.html` |
+| Technical lab, prediction, or code slide | Add a `section` to `src/main/resources/static/index.html` |
 | Another view of existing consumed records | Add a concept module and register it in `js/slides.js` |
 | New presenter controls | Wire them through the existing `LiveClient`; scope controls to their slide |
 | Evidence of processing, commits, batches, or replication | Design the missing backend observations before claiming to display that behavior |
@@ -38,7 +39,7 @@ Insert a section inside `.reveal > .slides`. Use a stable `id` for new slides so
 </section>
 ```
 
-Link to it with `#/ordering-prediction`. Reuse `eyebrow`, `intro`, `footnote`, `predictions`, and `code-layout` styles where appropriate. Update visible slide numbering if the sequence changes. Existing browser tests navigate by position and use `/#/2`; update those tests if insertion changes the experiment's position, preferably switching affected navigation to stable IDs.
+Link to it with `#/ordering-prediction`. Reuse `eyebrow`, `intro`, `footnote`, `predictions`, and `code-layout` styles where appropriate. Update visible slide numbering if the sequence changes. Browser tests navigate to the partitioning lab by stable ID (`/#/partitioning`); preserve these IDs when inserting or reordering slides.
 
 ## Add a concept plugin
 
@@ -209,3 +210,48 @@ validation and the basic Kafka API. `mountConcepts`, `dispatchConcepts` and
 `css/palette.css` overrides colors for this deck. Lesson CSS contains partitioning,
 ordering and experiment-specific selectors.
 Shared contracts: [core authoring guide](../../kafka-demo/docs/ADDING_LESSONS.md).
+
+## First-session explanation slides and live demos
+
+`index.html` combines the narrative and all existing live demos. The main story ends
+at `first-session-end`; the `optional-labs` divider introduces the existing offsets
+and lag code inspection. The adjacent `recovery-predict` and `lag-predict` slides
+lead into one `lag` concept/view before the main ending. Both scenarios share its
+controls and history; do not create another dashboard for recovery. Keep live demos in the main flow next to their explanations.
+`slides.js` owns the shared transport, topic and explicit commands. `/labs.html` is
+only a compatibility redirect; do not maintain a separate static-only introduction.
+
+Use `.story` in `css/story.css` for static diagrams and `aside.notes` plus
+`docs/FIRST_SESSION.md` for long explanations. Introduce terms before using them;
+presenter-led demos need no assumed participant setup. Only genuinely new behavior
+gets a placeholder, an HTML TODO and scope in `BACKLOG.md`. Never replace
+existing demos with placeholders. Preserve the predict/run/observe/code/change loop
+where it teaches the concept without turning the narrative into homework.
+
+## Notification event-chain demo
+
+The notifications concept at demo-record-journey owns a root-scoped form. Its
+controls use LiveClient.notifications() for explicit start/stop/place/clear actions.
+Start/Observe select the input experiment topic; navigation never selects topics.
+
+NotificationRuntime owns two consumers on separate threads, in distinct groups:
+the service reads the experiment topic and publishes OrderConfirmationPrepared;
+the inbox reads the configured confirmation topic. Both topics must be allowlisted,
+pre-created and distinct. Both consumers must resolve initial positions before
+placement is enabled. Start/stop controls the whole chain; no lifecycle work belongs
+to a view. ExperimentRuntime carries the nested snapshot on the existing input
+channel. Do not introduce a second observation socket for the output topic.
+
+Keep order acknowledgment, service consumption, output acknowledgment and inbox
+consumption distinct. completedAt/notification may only be set by output consumption.
+The output retains the order key and a causationId linking to the input event.
+Publication and read can be observed in either order; do not infer one timestamp
+from another. Validate/correlate output records and bound session state. Output
+send failures must not commit the input batch as successful; explicit restart may
+redeliver it and create duplicates because this is not a transactional pipeline.
+
+The frontend validates freshness from the shared stream and renders all values as
+text. The HTTP discovery snapshot does not establish freshness. Tests use embedded
+Kafka to independently read output records and compare inbox metadata; browser
+fixtures verify that output acknowledgment alone never fills the inbox. Inspect
+all four stages at presentation and laptop sizes. See ADR-00002 for the boundary.

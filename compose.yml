@@ -50,6 +50,7 @@ services:
       - |
         kafka-topics --bootstrap-server kafka:9092 --create --if-not-exists --topic kafka-demo --partitions 3 --replication-factor 1
         kafka-topics --bootstrap-server kafka:9092 --create --if-not-exists --topic kafka-demo-lab --partitions 3 --replication-factor 1
+        kafka-topics --bootstrap-server kafka:9092 --create --if-not-exists --topic kafka-demo-confirmations --partitions 3 --replication-factor 1
 
 volumes:
   kafka-data:

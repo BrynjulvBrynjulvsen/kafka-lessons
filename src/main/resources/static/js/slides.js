@@ -1,5 +1,7 @@
 import { mountConcepts, dispatchConcepts } from '/kafka-demo/js/deck.js';
 import { LiveClient } from './live-client.js';
+import { mountNotifications } from './concepts/notifications.js';
+import { wireNotifications } from './controls/notification-controls.js';
 import { mountPartitioning } from './concepts/partitioning.js';
 
 import { mountOrdering } from './concepts/ordering.js';
@@ -10,7 +12,7 @@ import { wireOrdering } from './controls/ordering-controls.js';
 import { wireExperimentControls } from './controls/experiment-controls.js';
 
 const client = new LiveClient();
-const concepts = { partitioning: mountPartitioning, ordering: mountOrdering, groups: mountGroups, offsets: mountOffsets, lag: mountLag };
+const concepts = { notifications: mountNotifications, partitioning: mountPartitioning, ordering: mountOrdering, groups: mountGroups, offsets: mountOffsets, lag: mountLag };
 const mounted = mountConcepts(document.querySelectorAll('[data-concept]'), concepts);
 const topic = document.querySelector('#topic');
 const send = document.querySelector('#send');
@@ -18,7 +20,9 @@ const status = document.querySelector('#produce-status');
 const connection = document.querySelector('#connection');
 let busy = false;
 client.addEventListener('status', ({ detail }) => {
-  connection.textContent = detail.text; connection.dataset.state = detail.state;
+  connection.textContent = detail.state === 'live' ? detail.text.replace(' · no replay', ' · no browser replay') : detail.text;
+  connection.dataset.state = detail.state;
+  if (detail.state !== 'live') notificationControls.markStale();
 });
 function dispatch(method, detail) { dispatchConcepts(mounted, method, detail); }
 client.addEventListener('record', ({ detail }) => dispatch('onRecord', detail));
@@ -27,9 +31,15 @@ const experimentControls = [...document.querySelectorAll('[data-role="experiment
     command: command => client.experiment(command), selectedTopic: () => topic.value,
     selectTopic: name => { topic.value = name; selectTopic(); },
   }));
+const notificationControls = wireNotifications(document.querySelector('[data-concept="notifications"]'), {
+  command: command => client.notifications(command), selectedTopic: () => topic.value,
+  selectTopic: name => { topic.value = name; selectTopic(); },
+  render: (snapshot, stale) => dispatch('onNotification', { ...snapshot, stale }),
+});
 let experimentSnapshot;
 function experiment(snapshot) {
   experimentSnapshot = snapshot;
+  if (snapshot.topic === topic.value && snapshot.notifications) notificationControls.update(snapshot.notifications, Boolean(snapshot.error));
   experimentControls.forEach(control => control.update(snapshot));
   if (snapshot.topic === topic.value) dispatch('onExperiment', snapshot);
 }
@@ -42,6 +52,7 @@ function selectTopic() {
   dispatch('reset');
   status.textContent = 'Ready to produce. Subscription does not confirm Kafka consumer assignment.';
   client.connect(topic.value);
+  notificationControls.refresh();
   if (experimentSnapshot) experimentControls.forEach(control => control.update(experimentSnapshot));
 }
 async function discover() {
@@ -50,6 +61,7 @@ async function discover() {
     topic.replaceChildren(...config.topics.map(name => new Option(name, name)));
     topic.value = config.defaultTopic; topic.disabled = false; send.disabled = false;
     selectTopic();
+    client.notifications().then(value => notificationControls.update(value, true)).catch(error => notificationControls.error(error.message));
     client.experiment().then(experiment).catch(error => experimentControls.forEach(c => c.error(error.message)));
   } catch (error) {
     status.textContent = `${error.message} Use Reconnect stream to retry.`;

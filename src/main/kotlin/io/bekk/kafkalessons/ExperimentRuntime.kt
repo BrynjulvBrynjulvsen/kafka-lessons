@@ -26,6 +26,7 @@ class ExperimentRuntime(
     private val producer: KafkaTemplate<String, String>,
     private val streams: TopicWebSocketHandler,
     private val demo: DemoProperties,
+    private val notifications: NotificationRuntime,
     @param:Value("\${demo.experiment.enabled:true}") val enabled: Boolean,
     @param:Value("\${demo.experiment.topic:kafka-demo-lab}") val topic: String,
     @Value("\${demo.experiment.group-prefix:kafka-demo-experiment}") prefix: String,
@@ -61,6 +62,7 @@ class ExperimentRuntime(
     @Synchronized fun snapshot(): Map<String, Any?> = mapOf(
         "type" to "experiment-snapshot", "version" to 1, "topic" to topic,
         "enabled" to enabled, "groups" to groups, "at" to System.currentTimeMillis(),
+        "notifications" to notifications.snapshot(),
         "partitions" to partitions.map { it.partition() }, "members" to workers.values.map { it.view() },
         "offsets" to offsets, "sampledAt" to sampledAt, "error" to sampleError,
         "events" to events.toList(), "groupDelays" to groupDelays.toMap(), "producing" to producing,

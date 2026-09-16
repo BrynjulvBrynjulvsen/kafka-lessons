@@ -5,7 +5,7 @@ import org.springframework.kafka.test.EmbeddedKafkaKraftBroker
 
 /** Isolated real Kafka for browser verification; never connects to the workshop or POC. */
 fun main(args: Array<String>) {
-    val broker = EmbeddedKafkaKraftBroker(1, 3, "kafka-demo", "kafka-demo-lab")
+    val broker = EmbeddedKafkaKraftBroker(1, 3, "kafka-demo", "kafka-demo-lab", "kafka-demo-confirmations")
     broker.brokerListProperty("spring.kafka.bootstrap-servers")
     broker.afterPropertiesSet()
     Runtime.getRuntime().addShutdownHook(Thread { broker.destroy() })

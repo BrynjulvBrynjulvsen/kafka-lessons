@@ -15,8 +15,7 @@ test('live records, bounded cards, navigation, reconnect and safe text', async (
   await expect(page.locator('#connection')).toContainText('Subscribed');
   await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(238, 243, 247)');
   await page.screenshot({ path: 'build/slides-title.png', animations: 'disabled' });
-  await page.keyboard.press('ArrowRight');
-  await page.keyboard.press('ArrowRight');
+  await page.evaluate(() => { location.hash = '/partitioning'; });
   await expect(page.locator('section.present')).toHaveAttribute('data-concept', 'partitioning');
   await page.locator('#key').fill(`browser-test-${Date.now()}`);
   const payload = '<img src=x onerror=alert(1)> live test';

@@ -17,6 +17,16 @@ export class LiveClient extends KafkaClient {
     }, 1000);
   }
   disconnect() { super.disconnect(); clearInterval(this.freshnessTimer); this.lastExperiment = undefined; }
+  async notifications(command) {
+    let response;
+    try { response = await fetch('/api/notifications', {
+      method: command ? 'POST' : 'GET', headers: { 'Content-Type': 'application/json' },
+      ...(command ? { body: JSON.stringify(command) } : {}), signal: AbortSignal.timeout(16000),
+    }); } catch { throw new Error('No notification response received. The action may have succeeded; inspect state before retrying.'); }
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.message || 'Notification command failed; inspect current state before retrying.');
+    return result;
+  }
   async experiment(command) {
     const response = await fetch('/api/experiment', {
       method: command ? 'POST' : 'GET', headers: { 'Content-Type': 'application/json' },

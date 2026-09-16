@@ -3,24 +3,114 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Kafka, live · Logs, groups and progress</title>
+  <title>Kafka · Something happened. Who needs to know?</title>
   <link rel="stylesheet" href="/kafka-demo/vendor/reveal/reveal.css">
   <link rel="stylesheet" href="/kafka-demo/css/theme.css">
   <link rel="stylesheet" href="css/palette.css">
   <link rel="stylesheet" href="css/slides.css">
+  <link rel="stylesheet" href="css/story.css">
 </head>
 <body>
-  <header class="deck-header"><a href="#/">KAFKA<span> / LIVE LAB</span></a><span id="connection" role="status">Connecting…</span></header>
+  <header class="deck-header"><a href="#/">KAFKA<span> / LIVE LESSONS</span></a><span id="connection" role="status">Connecting…</span></header>
   <div class="reveal"><div class="slides">
-    <section>
-      <p class="eyebrow">01 / PARTITIONING</p>
-      <h1>One topic.<br><span>Many ordered logs.</span></h1>
-      <p class="intro">Send a record. Follow its key.<br>See where Kafka puts it.</p>
-      <div class="pipeline"><span>Browser producer</span><b>→</b><span>Kafka topic</span><b>→</b><span>Live observation</span></div>
-      <p class="footnote">A real broker. Real partitions and offsets. Use → to begin.</p>
+
+    <section id="welcome" class="story story-title">
+      <p class="eyebrow">KAFKA / FIRST PRINCIPLES</p>
+      <h1>Something happened.<br><span>Who needs to know?</span></h1>
+      <div class="story-flow"><div class="story-event "><b>OrderPlaced</b><span>order-42</span></div><div class="story-arrow" aria-hidden="true"><small></small>→</div><div class="story-node "><strong>Notifications</strong><span></span></div><div class="story-node "><strong>Analytics</strong><span></span></div></div>
+      <p class="story-takeaway">Events → logs → keys → groups → scale</p>
+      <aside class="notes">Introduce streaming through a familiar application and narrate the concepts step by step. Static diagrams explain the concepts; the existing live demos then show Kafka behavior. Placeholders mark only new capabilities still to be built. The presenter operates demos; participants need no application setup.</aside>
     </section>
-    <section>
-      <p class="eyebrow">02 / PREDICT</p>
+
+    <section id="order-problem" class="story">
+      <p class="eyebrow">WHY / STREAMING</p><h2>A customer places an order.</h2>
+      <div class="story-flow"><div class="story-node "><strong>Order service</strong><span>Customer is waiting</span></div><div class="story-arrow" aria-hidden="true"><small>calls</small>→</div><div class="story-stack"><div class="story-node "><strong>Notifications</strong><span>Send confirmation</span></div><div class="story-node story-dashed"><strong>Analytics</strong><span>Unavailable</span></div><div class="story-node "><strong>Dashboard</strong><span>Update totals</span></div></div></div>
+      <p class="story-takeaway">Should checkout wait for every downstream application?</p>
+      <aside class="notes">Explain that in this illustrative synchronous design checkout waits on downstream calls. Analytics being unavailable can delay or fail that interaction. Adding another downstream application adds another dependency. This motivates the next diagram; it is not a claim that all HTTP integrations have these properties.</aside>
+    </section>
+
+    <section id="publish-events" class="story">
+      <p class="eyebrow">WHY / STREAMING</p><h2>Publish what happened.</h2>
+      <div class="story-flow"><div class="story-node "><strong>Order service</strong><span>Producer</span></div><div class="story-arrow" aria-hidden="true"><small>writes</small>→</div><div class="story-node story-accent"><strong>orders</strong><span>Kafka topic</span></div><div class="story-arrow" aria-hidden="true"><small>read</small>→</div><div class="story-stack"><div class="story-node "><strong>Notifications</strong><span></span></div><div class="story-node "><strong>Analytics</strong><span></span></div><div class="story-node "><strong>Dashboard</strong><span></span></div></div></div>
+      <p class="story-takeaway">Applications react at their own pace.</p>
+      <aside class="notes">The order service publishes OrderPlaced. Kafka stores it; independent applications read it. Broker acknowledgment is distinct from downstream processing. This sketch assumes the event was successfully published; coordinating database updates and publication is a later topic.</aside>
+    </section>
+
+    <section id="customer-experience" class="story">
+      <p class="eyebrow">WHY / THE CUSTOMER EXPERIENCE</p><h2>Accepted now. Confirmed later.</h2>
+      <div class="story-flow"><div class="story-node story-accent"><strong>Order accepted</strong><span>Save the order and ensure its event will be published before promising success.</span></div><div class="story-arrow" aria-hidden="true">→</div><div class="story-node"><strong>Confirmation pending</strong><span>Checkout can finish while the notification service works.</span></div><div class="story-arrow" aria-hidden="true">→</div><div class="story-node"><strong>Confirmation ready</strong><span>The customer receives the result later.</span></div></div>
+      <p class="story-takeaway">Agree on the wait: seconds or minutes? What does the customer see if it takes longer?</p>
+      <aside class="notes">This is an illustrative journey, not an implemented checkout. Agree what accepted means and which validation or payment steps must finish first. A pending state needs an expected delay and a way to handle overdue work. Saving an order and publishing its event are separate operations; reliable coordination, such as an outbox, needs a later explanation. Kafka acknowledgment alone does not prove an order was saved or a confirmation delivered.</aside>
+    </section>
+
+    <section id="event-stream" class="story">
+      <p class="eyebrow">WHY / STREAMING</p><h2>A stream keeps arriving.</h2>
+      <div class="story-time">Time →</div><div class="story-flow"><div class="story-event "><b>OrderPlaced</b><span>order-42</span></div><div class="story-event "><b>OrderPlaced</b><span>order-99</span></div><div class="story-event "><b>OrderPaid</b><span>order-42</span></div><div class="story-event story-dashed"><b>…</b><span>more events</span></div></div><div class="story-caption">Something happened → record it → react</div>
+      <p class="story-takeaway">An event is a fact. A stream is an ongoing sequence of events.</p>
+      <aside class="notes">Compare a nightly batch with continually reacting to arriving data. This timeline illustrates business events, not a global ordering guarantee across Kafka partitions. Kafka Streams is not required to write a basic producer or consumer.</aside>
+    </section>
+
+    <section id="retained-history" class="story">
+      <p class="eyebrow">WHY / STREAMING</p><h2>The reader can catch up.</h2>
+      <div class="story-lane"><strong>Retained log</strong><div class="story-event "><b>0</b><span>Placed</span></div><div class="story-event "><b>1</b><span>Paid</span></div><div class="story-event "><b>2</b><span>Placed</span></div><div class="story-event "><b>3</b><span>Shipped</span></div><div class="story-event "><b>4</b><span>Paid</span></div></div><div class="story-flow"><div class="story-node "><strong>Notifications</strong><span>Reading new events</span></div><div class="story-node story-dashed"><strong>Analytics</strong><span>Paused at its bookmark</span></div><div class="story-node "><strong>New application</strong><span>Can read retained history</span></div></div>
+      <p class="story-takeaway">Reading a record does not delete it.</p>
+      <aside class="notes">A stopped reader may resume while its data remains retained. Retention is finite and configured independently of consumption. A new group needs an appropriate starting position to read history. This is an explanatory log, not the bounded browser history.</aside>
+    </section>
+
+    <section id="moving-parts" class="story">
+      <p class="eyebrow">HOW / RECORDS</p><h2>Meet the moving parts.</h2>
+      <div class="story-flow"><div class="story-node "><strong>Producer</strong><span>Your application</span></div><div class="story-arrow" aria-hidden="true"><small>writes</small>→</div><div class="story-boundary"><span class="story-label">BROKER · KAFKA SERVER</span><div class="story-node story-accent"><strong>Topic</strong><span>Named stream of records</span></div></div><div class="story-arrow" aria-hidden="true"><small>records</small>→</div><div class="story-node "><strong>Consumer</strong><span>Your app fetches records</span></div></div>
+      <p class="story-takeaway">Your code writes and reads. Kafka stores the records.</p>
+      <aside class="notes">Consumers fetch from brokers; the arrow shows record flow, not broker push. A cluster contains one or more brokers; partitions are hosted on brokers. An application can both produce and consume. The order service is our producer; the notifications and analytics applications are consumers.</aside>
+    </section>
+
+    <section id="record-anatomy" class="story">
+      <p class="eyebrow">HOW / RECORDS</p><h2>One record. A few useful labels.</h2>
+      <div class="story-record"><div class="story-record-head"><span>TOPIC</span><strong>orders</strong></div><div class="story-record-body"><div><span class="story-label">KEY</span><strong>order-42</strong></div><div><span class="story-label">VALUE · ILLUSTRATIVE JSON</span><code>{ "type": "OrderPlaced", "total": 299 }</code></div></div><div class="story-record-meta"><span>Partition <b>1</b></span><span>Offset <b>7</b></span><span>Timestamp <b>12:04:03</b></span></div></div>
+      <p class="story-takeaway">The key groups related events. The value describes what happened.</p>
+      <aside class="notes">The topic is the destination. A record has a key and value and can also have headers. Kafka stores bytes; JSON is one possible application representation. The producer selects a partition and the broker assigns an offset. Timestamp semantics depend on configuration.</aside>
+    </section>
+
+    <section id="demo-record-journey" data-concept="notifications" class="notification-demo">
+      <p class="eyebrow">LIVE DEMO / AN APPLICATION REACTS</p><h2>From an event to a notification.</h2>
+      <p class="notification-intro">Order event → confirmation service → confirmation event → inbox consumer</p>
+      <div class="notification-stages">
+        <article data-role="notification-stage"><span>01 / ORDER TOPIC</span><strong>Order published</strong><small>Waiting</small></article>
+        <article data-role="notification-stage"><span>02 / SERVICE</span><strong>Order consumed</strong><small>Waiting</small></article>
+        <article data-role="notification-stage"><span>03 / CONFIRMATION TOPIC</span><strong>Event published</strong><small>Waiting</small></article>
+        <article data-role="notification-stage"><span>04 / INBOX CONSUMER</span><strong>Confirmation received</strong><small>Waiting</small></article>
+      </div>
+      <div class="notification-layout">
+        <div class="notification-controls">
+          <button class="secondary" data-action="notification-observe" disabled>Observe demo topic</button>
+          <div class="notification-buttons"><button data-action="notification-start" disabled>Start chain</button><button data-action="notification-stop" disabled>Stop chain</button></div>
+          <form><label>Order ID<input name="order-id" value="order-42" maxlength="40" pattern="[A-Za-z0-9_-]{1,40}" required></label><button data-action="notification-place" type="submit" disabled>Place order ↗</button></form>
+          <p data-role="notification-service" role="status">Discovering notification service…</p>
+          <p data-role="notification-status" role="status">Start both consumers, then place an order.</p>
+          <button class="secondary" data-action="notification-clear" disabled>Clear stopped inbox</button>
+        </div>
+        <div><h3>Local notification inbox</h3><div data-role="notification-inbox"></div></div>
+      </div>
+      <p class="legend">OrderConfirmationPrepared is a real event on a second topic, keyed by order ID. Only the inbox consumer updates the local inbox. Its display is held in memory.</p>
+      <aside class="notes">Backlog item 18 now runs a two-topic chain. Start chain starts the confirmation service and inbox consumer in separate groups; wait for both assignments. Place order publishes OrderPlaced. The service consumes it, prepares a confirmation and publishes OrderConfirmationPrepared to the configured second topic with the same order key and a causation ID. Only consumption of that output record fills the inbox. Acknowledgments and reads are independently observed and can arrive close together. Stop chain stops both consumers; clearing changes the bounded local display only. Both consumers are hosted in this demo application. Correlation state is session-local; restart loses it. Output publication and input commit are not transactional, so failure/redelivery can duplicate output events.</aside>
+    </section>
+
+    <section id="partition-logs" class="story">
+      <p class="eyebrow">HOW / PARTITIONS</p><h2>One topic. Three ordered logs.</h2>
+      <div class="story-boundary"><span class="story-label">TOPIC · ORDERS</span><div class="story-lane"><strong>Partition 0</strong><div class="story-event "><b>0</b><span>order-12</span></div><div class="story-event "><b>1</b><span>order-18</span></div><div class="story-event "><b>2</b><span>order-12</span></div></div><div class="story-lane"><strong>Partition 1</strong><div class="story-event "><b>0</b><span>order-42</span></div><div class="story-event "><b>1</b><span>order-42</span></div><div class="story-event "><b>2</b><span>order-73</span></div></div><div class="story-lane"><strong>Partition 2</strong><div class="story-event "><b>0</b><span>order-99</span></div><div class="story-event "><b>1</b><span>order-99</span></div></div></div>
+      <p class="story-takeaway">An offset is a position inside one partition.</p>
+      <aside class="notes">Append to a lane, do not move existing records. Offsets in different partitions are not comparable as a global sequence. These short illustrative offsets are contiguous; real observed offsets need not be. Partitions allow work to be distributed.</aside>
+    </section>
+
+    <section id="choose-key" class="story">
+      <p class="eyebrow">HOW / KEYS</p><h2>Which events belong together?</h2>
+      <div class="story-flow"><div class="story-event "><b>OrderPlaced</b><span>key: order-42</span></div><div class="story-arrow" aria-hidden="true"><small></small>→</div><div class="story-event "><b>OrderPaid</b><span>key: order-42</span></div><div class="story-arrow" aria-hidden="true"><small></small>→</div><div class="story-event "><b>OrderShipped</b><span>key: order-42</span></div></div><div class="story-destination">↓ &nbsp; Same partition</div>
+      <p class="story-takeaway">The order ID keeps events about one order together.</p>
+      <aside class="notes">With consistent key serialization, the default keyed partitioner and a fixed partition count, the same key maps to the same partition. Different keys can share a partition. This does not sort events by timestamp or fix events published out of business order. Null keys do not imply round-robin.</aside>
+    </section>
+
+    <section id="partitioning-predict">
+      <p class="eyebrow">KEYS / PREDICT</p>
       <h2>Where will the next<br>record land?</h2>
       <div class="predictions">
         <article><span>01</span><h3>Repeat a key</h3><p>With the same partition count and default partitioner, the same key selects the same partition.</p></article>
@@ -29,14 +119,15 @@
       </div>
       <p class="footnote">Look for ordering within a partition. Offsets from different partitions are not a global sequence.</p>
     </section>
+
     <section id="partitioning" data-concept="partitioning">
-      <p class="eyebrow">03 / EXPERIMENT</p>
+      <p class="eyebrow">KEYS / EXPERIMENT</p>
       <h2>Follow the key.</h2>
       <div class="lab">
         <form id="producer">
           <label for="topic">Topic</label><select id="topic" disabled></select>
-          <label for="key">Record key <small>empty = null</small></label><input id="key" value="customer-1" maxlength="1024" autocomplete="off">
-          <label for="value">Value</label><textarea id="value" maxlength="16384" rows="2">Hello Kafka</textarea>
+          <label for="key">Record key <small>empty = null</small></label><input id="key" value="order-42" maxlength="1024" autocomplete="off">
+          <label for="value">Value</label><textarea id="value" maxlength="16384" rows="2">{"type":"OrderPlaced"}</textarea>
           <button id="send" type="submit" disabled>Produce record ↗</button>
           <p id="produce-status" role="status">Discovering configured topics…</p>
           <button id="reconnect" class="secondary" type="button">Reconnect stream</button>
@@ -48,8 +139,9 @@
         </div>
       </div>
     </section>
-    <section>
-      <p class="eyebrow">04 / INSPECT & CHANGE</p>
+
+    <section id="partitioning-code">
+      <p class="eyebrow">KEYS / INSPECT &amp; CHANGE</p>
       <h2>The code is the lesson.</h2>
       <div class="code-layout"><pre><code>// MessageController.kt
 kafka.send(ProducerRecord(
@@ -62,18 +154,27 @@ offset = record.offset()</code></pre><div><h3>Change one thing.</h3><p>Return to
       <p class="footnote">HTTP success = broker acknowledgment. A card = backend consumption observed.<br>Neither proves application processing or an offset commit. Reconnecting has no browser replay.</p>
     </section>
 
+    <section id="ordering-meaning" class="story">
+      <p class="eyebrow">HOW / ORDERING</p><h2>Which order matters?</h2>
+      <div class="story-lane"><strong>Order 42</strong><div class="story-event "><b>Placed</b><span>order-42</span></div><div class="story-event "><b>Paid</b><span>order-42</span></div><div class="story-event "><b>Shipped</b><span>order-42</span></div></div><div class="story-lane"><strong>Order 99</strong><div class="story-event "><b>Placed</b><span>order-99</span></div><div class="story-event "><b>Paid</b><span>order-99</span></div><div class="story-event "><b>Shipped</b><span>order-99</span></div></div>
+      <p class="story-takeaway">Each order has a sequence. Different orders can progress independently.</p>
+      <aside class="notes">Explain the two order lifecycles, then connect each sequence to its partition. Kafka preserves the order records were appended within a partition, not a global order across the topic. Concurrent application processing can finish out of order. The following existing live sequence demo shows partition-local read order. Its A1/B1 labels are application sequence labels, separate from Kafka offsets.</aside>
+    </section>
+
     <section id="ordering-predict">
       <p class="eyebrow">ORDERING / PREDICT</p><h2>Two sequences.<br>Which order survives?</h2>
       <div class="predictions"><article><h3>Same key</h3><p>Send A1, A2, A3. Keep partition count and partitioner fixed.</p></article><article><h3>Interleave</h3><p>Send A1, B1, A2, B2. Must two keys land in different partitions?</p></article><article><h3>Compare</h3><p>Does offset 12 in one partition come before offset 15 in another?</p></article></div>
       <p class="footnote">Kafka offsets order records within each partition. Payload sequence labels belong to the application.</p>
     </section>
+
     <section id="ordering" data-concept="ordering">
       <p class="eyebrow">ORDERING / EXPERIMENT</p><h2>Follow each sequence.</h2>
-      <div class="sequence-controls"><label>First key <input name="first-key" value="customer-1"></label><label>Second key <input name="second-key" value="customer-2"></label><button data-action="sequence">Send interleaved sequence</button></div>
+      <div class="sequence-controls"><label>First key <input name="first-key" value="order-42"></label><label>Second key <input name="second-key" value="order-99"></label><button data-action="sequence">Send interleaved sequence</button></div>
       <p data-role="sequence-status" class="command-status" role="status">Uses the deck's selected topic. Each send waits for acknowledgment.</p>
       <div data-role="lanes" class="order-lanes"></div>
       <p class="legend">Latest six observations per lane, oldest → newest. Offsets need not be contiguous. Different keys may share a partition.</p>
     </section>
+
     <section id="ordering-code"><p class="eyebrow">ORDERING / INSPECT &amp; CHANGE</p><h2>Change a key. Keep the sequence.</h2>
       <div class="code-layout"><pre><code>// MessageController.kt
 kafka.send(ProducerRecord(
@@ -83,13 +184,44 @@ kafka.send(ProducerRecord(
 partition = record.partition()
 offset = record.offset()</code></pre><div><p>Return to the experiment. Make both keys identical, then send again.</p><p>Compare the partition lanes. Payload numbers and Kafka offsets are separate sequences.</p></div></div>
     </section>
+
+    <section id="independent-groups" class="story">
+      <p class="eyebrow">HOW / CONSUMER GROUPS</p><h2>Two applications. Two groups.</h2>
+      <div class="story-flow"><div class="story-node story-accent"><strong>orders</strong><span>Same retained topic</span></div><div class="story-arrow" aria-hidden="true"><small></small>→</div><div class="story-stack"><div class="story-boundary"><span class="story-label">GROUP A · NOTIFICATIONS</span><div class="story-node "><strong>Notifications 1</strong><span>Reads the topic</span></div></div><div class="story-boundary"><span class="story-label">GROUP B · ANALYTICS</span><div class="story-node "><strong>Analytics 1</strong><span>Reads the topic independently</span></div></div></div></div>
+      <p class="story-takeaway">Group B does not take work away from Group A.</p>
+      <aside class="notes">Notifications sends order confirmations; Analytics updates statistics. Each is a separate application with its own consumer group and progress. Both can read the same retained records, subject to starting position and retention. The diagrams show one consumer instance per application so far.</aside>
+    </section>
+
+    <section id="consumer-instances" class="story">
+      <p class="eyebrow">HOW / APPLICATION INSTANCES</p><h2>An application can run more than once.</h2>
+      <div class="story-boundary"><span class="story-label">NOTIFICATIONS APPLICATION · SENDS ORDER CONFIRMATIONS</span><div class="story-flow"><div class="story-node"><strong>Instance 1</strong><span>Running copy · Kafka consumer</span></div><div class="story-node"><strong>Instance 2</strong><span>Running copy · Kafka consumer</span></div></div></div>
+      <p class="story-takeaway">Here, each running copy contains one consumer. Together, they form one group.</p>
+      <aside class="notes">Define instance before using scaling diagrams: a running copy of the same application. In this simplified example each copy has one Kafka consumer, and all notifications copies use the same group.id. A worker is not a separate Kafka component; use consumer or instance throughout. Actual applications may contain multiple consumers.</aside>
+    </section>
+
+    <section id="shared-work" class="story">
+      <p class="eyebrow">HOW / CONSUMER GROUPS</p><h2>One application. Several consumers.</h2>
+      <div class="story-columns"><div class="story-boundary"><span class="story-label">GROUP A · NOTIFICATIONS</span><div class="story-flow"><div class="story-node "><strong>Instance 1</strong><span>P0 · P1</span></div><div class="story-node "><strong>Instance 2</strong><span>P2</span></div></div></div><div class="story-boundary"><span class="story-label">GROUP B · ANALYTICS</span><div class="story-node "><strong>Instance 1</strong><span>P0 · P1 · P2</span></div></div></div>
+      <p class="story-takeaway">Same group: divide partitions. Different groups: read independently.</p>
+      <aside class="notes">The assignments shown are one valid example, not a deterministic assignment promise. Consumers use the same group.id to cooperate. Stable ordinary consumer groups assign each partition to one member. One member may own multiple partitions.</aside>
+    </section>
+
+    <section id="scaling-limit" class="story">
+      <p class="eyebrow">HOW / SCALING</p><h2>Three partitions. Four consumers.</h2>
+      <div class="story-scale"><div class="story-scale-row"><b>1 consumer</b><div class="story-node "><strong>A1</strong><span>P0 · P1 · P2</span></div></div><div class="story-scale-row"><b>2 consumers</b><div class="story-node "><strong>A1</strong><span>P0 · P1</span></div><div class="story-node "><strong>A2</strong><span>P2</span></div></div><div class="story-scale-row"><b>3 consumers</b><div class="story-node "><strong>A1</strong><span>P0</span></div><div class="story-node "><strong>A2</strong><span>P1</span></div><div class="story-node "><strong>A3</strong><span>P2</span></div></div><div class="story-scale-row"><b>4 consumers</b><div class="story-node "><strong>A1</strong><span>P0</span></div><div class="story-node "><strong>A2</strong><span>P1</span></div><div class="story-node "><strong>A3</strong><span>P2</span></div><div class="story-node "><strong>A4</strong><span>Idle</span></div></div></div>
+      <p class="story-takeaway">With three partitions, at most three consumers can have an assignment.</p>
+      <aside class="notes">Narrate the rows from top to bottom: one consumer handles all three partitions; additional consumers share them; a fourth has no partition to read. A1–A4 are consumers in Group A. This is a stable ordinary consumer group subscribed to one topic. Exact ownership can differ. These diagrams explain possible assignments, not a running environment.</aside>
+    </section>
+
     <section id="groups-predict"><p class="eyebrow">GROUPS / PREDICT</p><h2>Three partitions.<br>Four consumers?</h2>
       <div class="predictions"><article><h3>One group</h3><p>Start one, then two, then four members. Predict which members own partitions.</p></article><article><h3>Two groups</h3><p>Start group B. Send fresh records. Does B take work away from A?</p></article><article><h3>Two browsers</h3><p>Open another viewer. Does this add a Kafka group member?</p></article></div>
     </section>
+
     <section id="groups" data-concept="groups" class="experiment"><p class="eyebrow">GROUPS / EXPERIMENT</p><h2>Who owns each partition?</h2>
       <div class="lab"><div data-role="experiment-controls" class="experiment-controls"></div><div data-role="experiment-view" class="experiment-view group-view"></div></div>
-      <p class="legend">Assignments and deliveries come from dedicated demo workers. Wait for running members and assigned partitions before sending. Input explicitly rotates partitions.</p>
+      <p class="legend">Example roles: A = Notifications · B = Analytics. These demo workers are separate from the notification service. Wait for assignments before sending; input explicitly rotates partitions.</p>
     </section>
+
     <section id="groups-code"><p class="eyebrow">GROUPS / INSPECT &amp; CHANGE</p><h2>Membership belongs to the backend.</h2>
       <div class="code-layout"><pre><code>// ExperimentRuntime.kt
 GROUP_ID_CONFIG = group
@@ -98,13 +230,98 @@ val records = kafka.poll(...)
 // listener reports actual assignments</code></pre><div><p>Change member count in group A. Then start B and send a fresh workload.</p><p>One owner per partition per stable group. More members than partitions means idle members.</p></div></div>
       <p class="footnote">Slides share one observation socket. Navigation and browser reconnect do not change group membership.</p>
     </section>
+
+    <section id="busy-partition" class="story">
+      <p class="eyebrow">CONNECT / KEYS + SCALING</p><h2>Work must spread to scale.</h2>
+      <div class="story-columns"><div class="story-boundary"><span class="story-label">BALANCED INPUT</span><div class="story-load"><b>P0</b><i style="--load:45%"></i></div><div class="story-load"><b>P1</b><i style="--load:45%"></i></div><div class="story-load"><b>P2</b><i style="--load:45%"></i></div></div><div class="story-boundary"><span class="story-label">ONE VERY BUSY KEY</span><div class="story-load"><b>P0</b><i style="--load:95%"></i></div><div class="story-load"><b>P1</b><i style="--load:15%"></i></div><div class="story-load"><b>P2</b><i style="--load:15%"></i></div></div></div>
+      <p class="story-takeaway">An extra consumer cannot share a busy partition within this group.</p>
+      <aside class="notes">The bars illustrate input distribution, not measured throughput. One very busy key maps to one partition for a fixed keyed mapping. That partition remains assigned to one consumer within an ordinary group. More consumers therefore do not guarantee proportional throughput.</aside>
+    </section>
+
+    <!-- TODO INTRO-DEMO-4: new keyed-workload demo; existing group workload rotates partitions. -->
+    <section id="demo-hot-key" class="story">
+      <p class="eyebrow">NEW DEMO / PLACEHOLDER</p><h2>When one key gets busy.</h2>
+      <div class="story-flow"><div class="story-node"><strong>Balanced keys</strong><span>Work across partitions</span></div><div class="story-node"><strong>One busy key</strong><span>Work concentrates</span></div><div class="story-node"><strong>More consumers</strong><span>One still owns the busy partition</span></div></div>
+      <p class="story-takeaway">New demo planned · compare balanced input with a hot key</p>
+      <aside class="notes">TODO INTRO-DEMO-4: Add a controlled keyed workload and partition-specific progress observations to show skew and its scaling limit. The existing groups demo already shows assignments and group scaling, but its workload explicitly rotates partitions, so it cannot demonstrate this keyed distribution. Introduce the scenario and run it as a presenter demonstration. See BACKLOG.md.</aside>
+    </section>
+
+    <section id="group-bookmarks" class="story">
+      <p class="eyebrow">CONNECT / PROGRESS</p><h2>Shared history. Separate bookmarks.</h2>
+      <div class="story-lane"><strong>Partition 1</strong><div class="story-event "><b>0</b><span>Placed</span></div><div class="story-event "><b>1</b><span>Paid</span></div><div class="story-event "><b>2</b><span>Placed</span></div><div class="story-event "><b>3</b><span>Shipped</span></div><div class="story-event "><b>4</b><span>Paid</span></div></div><div class="story-bookmarks"><div>Analytics <b>↑ next: 2</b></div><div>Notifications <b>↑ next: 4</b></div></div>
+      <p class="story-takeaway">A commit records where a group should resume.</p>
+      <aside class="notes">A committed offset is the next offset to read, per group and partition. Explain these as independent saved bookmarks. Consuming does not delete a record. Restarting may redeliver uncommitted work, and a commit alone does not prove an external business effect. Detailed commit policies belong in a later session.</aside>
+    </section>
+
+    <section id="recovery-predict" class="story">
+      <p class="eyebrow">RECOVERY / PREDICT</p><h2>One reader stops. Do orders stop?</h2>
+      <div class="story-flow"><div class="story-node"><strong>Both caught up</strong><span>Start A and B. Send a warm-up workload and confirm both commits reach the log end.</span></div><div class="story-node story-dashed"><strong>Stop Group B</strong><span>Send another workload. What happens to A? Where will B resume?</span></div><div class="story-node"><strong>Restart Group B</strong><span>Watch its saved progress catch up to the retained log.</span></div></div>
+      <p class="story-takeaway">Example roles: A = Notifications · B = Analytics.</p>
+      <aside class="notes">Use the shared lag view after the two scenario slides. These workers simulate processing; they are separate from the earlier notification service. Observe the experiment topic. Start one member in each group with zero delay. Send a warm-up; wait for production to finish and all six lag values to reach zero, establishing valid commits. Stop B and wait for Inactive. Send another workload; A catches up while B retains its previous commits. Restart B with 200 ms delay so catch-up is visible. Wait for all six lag values to reach zero. Do not reset offsets or change start-position policy. See docs/FIRST_SESSION.md for the full procedure.</aside>
+    </section>
+
+    <section id="lag-predict"><p class="eyebrow">LAG / PREDICT</p><h2>Can processing keep up?</h2>
+      <div class="predictions"><article><h3>Slow down</h3><p>Keep both groups running after recovery. Set group B’s processing delay to 1000 ms.</p></article><article><h3>Send</h3><p>Send a bounded workload. Predict which partition backlogs grow.</p></article><article><h3>Catch up</h3><p>Stop production. Set delay to zero. Watch confirmed commits catch up.</p></article></div>
+    </section>
+
+    <section id="lag" data-concept="lag" class="experiment"><p class="eyebrow">RECOVERY + LAG / LIVE DEMO</p><h2>Watch the distance close.</h2>
+      <div class="lab"><div data-role="experiment-controls" class="experiment-controls"></div><div data-role="experiment-view" class="experiment-view"></div></div>
+      <p class="legend">A = Notifications · B = Analytics (example roles; separate demo workers). Committed-offset lag = log end − committed offset, per partition. It is an offset distance, not a count of unfinished business operations. Commits can advance in steps.</p>
+      <aside class="notes">One shared view for both scenarios. First stop B, send while A continues, then restart B from its saved commits. Next keep B running but slow its processing: send again and watch lag grow, then set delay to zero. Establish valid commits with the warm-up before either scenario. All commands are explicit; navigation changes no consumer state. See docs/FIRST_SESSION.md for setup and cleanup.</aside>
+    </section>
+
+    <section id="duplicate-effects" class="story">
+      <p class="eyebrow">FAILURE / AN APPLICATION RESPONSIBILITY</p><h2>What if the same event returns?</h2>
+      <div class="story-flow"><div class="story-node"><strong>Confirmation sent</strong><span>The business action succeeds.</span></div><div class="story-arrow" aria-hidden="true">→</div><div class="story-node story-dashed"><strong>Crash before commit</strong><span>The group's saved bookmark has not advanced.</span></div><div class="story-arrow" aria-hidden="true">→</div><div class="story-node"><strong>Event read again</strong><span>Should the customer receive another confirmation?</span></div></div>
+      <p class="story-takeaway">Idempotency: repeating an event must not repeat an unwanted business effect.</p>
+      <aside class="notes">Explained failure scenario, not a crash demo. Uncommitted work may be read again after restart. Stable event IDs and durable duplicate-prevention state can help, but the check and effect must be coordinated: a separate seen flag leaves another crash window. An external provider may support an idempotency key. Ask how serious a repeated payment would be. Committing before the action risks missing the action after a crash. The current in-memory notification demo does not implement durable duplicate prevention; the live capability remains backlog item 8.</aside>
+    </section>
+
+    <section id="when-streaming" class="story">
+      <p class="eyebrow">RECAP / WHY KAFKA</p><h2>Would streaming help here?</h2>
+      <div class="story-benefits"><div class="story-node "><strong>Many readers</strong><span>Reuse the same events</span></div><div class="story-node "><strong>Different speeds</strong><span>Catch up within retention</span></div><div class="story-node "><strong>Independent scale</strong><span>Each group scales separately</span></div><div class="story-node "><strong>Useful history</strong><span>Read retained events again</span></div></div>
+      <p class="story-takeaway">A good fit when work can happen later and retained events have value.</p>
+      <p class="legend">Need one immediate answer, such as a product lookup? A request/response API may be sufficient.</p>
+      <aside class="notes">Return to the opening order service. Kafka adds infrastructure, eventual results and failure-handling responsibilities. Simple immediate request/response can still be the right choice. Replay needs appropriate consumer positions; retention is not unlimited. Database/publication consistency, retries and duplicate-safe effects deserve a later session.</aside>
+    </section>
+
+    <section id="client-questions" class="story">
+      <p class="eyebrow">RECAP / ASK THE CLIENT</p><h2>Start with the need.</h2>
+      <div class="story-benefits"><div class="story-node"><strong>Independent readers?</strong><span>Which applications need the same event?</span></div><div class="story-node"><strong>Useful history?</strong><span>Who needs to catch up or reprocess past events?</span></div><div class="story-node"><strong>Acceptable delay?</strong><span>How long can a result remain pending?</span></div><div class="story-node"><strong>Failure ownership?</strong><span>Who detects overdue work and resolves failures?</span></div></div>
+      <p class="story-takeaway">Choose the integration after agreeing on the requirements.</p>
+      <aside class="notes">Use these questions before selecting technology. Kafka adds operational work, event contracts and application failure handling. The team's ability to own these responsibilities matters alongside throughput. The answers may support Kafka, another integration mechanism or an ordinary synchronous call.</aside>
+    </section>
+
+    <section id="order-system-recap" class="story">
+      <p class="eyebrow">RECAP / THE COMPLETE PICTURE</p><h2>The pieces fit together.</h2>
+      <div class="story-flow"><div class="story-node"><strong>Order service</strong><span>Produces order events</span></div><div class="story-arrow" aria-hidden="true">→</div><div class="story-node"><strong>orders topic</strong><span>Key: order ID · 3 partitions</span></div><div class="story-arrow" aria-hidden="true">→</div><div class="story-stack"><div class="story-node"><strong>Notifications group</strong><span>3 consumers · shared partitions</span></div><div class="story-node"><strong>Analytics group</strong><span>1 consumer · all partitions</span></div></div></div>
+      <p class="story-takeaway">One retained stream supports two independently scaled applications.</p>
+      <aside class="notes">Walk through the completed example. The key relates events for an order, partitions provide parallelism, and each group reads independently. Three partitions illustrate three active notification consumers; this is not a general partition-sizing recommendation. There is no task for participants to perform.</aside>
+    </section>
+
+    <section id="first-session-end" class="story">
+      <p class="eyebrow">FIRST SESSION / FINISH</p><h2>One event. Many possibilities.</h2>
+      <div class="story-flow"><div class="story-event "><b>OrderPlaced</b><span>order-42</span></div><div class="story-arrow" aria-hidden="true"><small></small>→</div><div class="story-node "><strong>Ordered log</strong><span>Partition + offset</span></div><div class="story-arrow" aria-hidden="true"><small></small>→</div><div class="story-node "><strong>Independent groups</strong><span>Shared work within each</span></div></div>
+      <p class="story-takeaway">Producers publish. Kafka retains. Consumer groups read independently.</p>
+      <aside class="notes">Close by returning to the order service: downstream applications can react at their own pace, retain separate progress and scale independently. The main session ends here. All existing live demos remain in this deck; offsets/replay and lag code inspection follow the optional divider. New demonstrations are tracked in BACKLOG.md.</aside>
+    </section>
+
+    <section id="optional-labs" class="story">
+      <p class="eyebrow">OPTIONAL / LIVE DEMOS</p><h2>A closer look at progress.</h2>
+      <div class="story-flow"><div class="story-node"><strong>Offsets &amp; replay</strong><span>Where consumption resumes</span></div><div class="story-node"><strong>Lag code</strong><span>How delay and checkpoints affect progress</span></div></div>
+      <p class="story-takeaway">Existing live demos · available for a deeper look</p>
+      <aside class="notes">These working demos remain in the same deck. Include them when useful; detailed commit policies and replay controls are beyond the basic first-session narrative. Presenter actions stay explicit.</aside>
+    </section>
+
     <section id="offsets-predict"><p class="eyebrow">OFFSETS / PREDICT</p><h2>Where will we resume?</h2>
       <div class="predictions"><article><h3>Restart</h3><p>After a confirmed commit, stop and restart the group.</p></article><article><h3>Change policy</h3><p>Does earliest override an existing valid commit?</p></article><article><h3>Replay</h3><p>Stop all members, reset one partition within its retained range, then restart.</p></article></div>
     </section>
+
     <section id="offsets" data-concept="offsets" class="experiment"><p class="eyebrow">OFFSETS / EXPERIMENT</p><h2>Fetch. Process. Commit.</h2>
       <div class="lab"><div data-role="experiment-controls" class="experiment-controls"></div><div data-role="experiment-view" class="experiment-view"></div></div>
       <p class="legend">All → values are next offsets. Position can lead processing after a batch poll. Commit is sampled from Kafka. — means unknown; processed progress covers this worker's current assignment.</p>
     </section>
+
     <section id="offsets-code"><p class="eyebrow">OFFSETS / INSPECT &amp; CHANGE</p><h2>A commit stores the next offset.</h2>
       <div class="code-layout"><pre><code>// ExperimentRuntime.kt
 val records = kafka.poll(...)
@@ -115,13 +332,9 @@ for (record in records) {
 }
 kafka.commitSync(completed, ...)</code></pre><div><p>Compare a group with a valid commit and an unused group. Earliest/latest applies when a valid commit is absent.</p><p>A display reset clears observations. An inactive-group offset reset changes Kafka's resume point.</p></div></div>
     </section>
-    <section id="lag-predict"><p class="eyebrow">LAG / PREDICT</p><h2>Can processing keep up?</h2>
-      <div class="predictions"><article><h3>Slow down</h3><p>Start a member in the group lab. Set group A’s processing delay to 1000 ms.</p></article><article><h3>Send</h3><p>Send a bounded workload. Predict which partition backlogs grow.</p></article><article><h3>Catch up</h3><p>Stop production. Set delay to zero. Watch confirmed commits catch up.</p></article></div>
-    </section>
-    <section id="lag" data-concept="lag" class="experiment"><p class="eyebrow">LAG / EXPERIMENT</p><h2>Watch the distance close.</h2>
-      <div class="lab"><div data-role="experiment-controls" class="experiment-controls"></div><div data-role="experiment-view" class="experiment-view"></div></div>
-      <p class="legend">Committed-offset lag = log end − committed offset, per partition. It is an offset distance, not a count of unfinished business operations. Commits can advance in steps.</p>
-    </section>
+
+
+
     <section id="lag-code"><p class="eyebrow">LAG / INSPECT &amp; CHANGE</p><h2>Separate work from its checkpoint.</h2>
       <div class="code-layout"><pre><code>// ExperimentRuntime.kt
 Thread.sleep(groupDelays.getValue(group))
@@ -131,7 +344,7 @@ kafka.commitSync(completed, ...)
 lag = logEndOffset - committedOffset</code></pre><div><p>Change only processing delay at first. Keep the workload and commit policy fixed.</p><p>Zero lag means the sampled commit has caught up. It does not prove external business effects completed.</p></div></div>
     </section>
   </div></div>
-  <footer>APACHE KAFKA / LIVE LESSONS <span>← → navigate · Esc overview · F fullscreen</span></footer>
+  <footer>APACHE KAFKA / INTRODUCTION <span>← → navigate · Esc overview · F fullscreen</span></footer>
   <script type="module" src="js/slides.js"></script>
 </body>
 </html>
